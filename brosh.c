@@ -12,7 +12,8 @@
 #include <unistd.h>
 
 #define clear() printf("\033[H\033[J")
-#define MAXLN 1000 // Maximum command length
+#define MAXARGS 1000 // Maximum command arguments
+#define MAXSTR 1000 // Maximum command length
 
 void init() {
     clear();
@@ -35,11 +36,20 @@ int getInput(char *str, char *machine, char *username) {
     }
 }
 
+void parseInput(char* inputString, char* retval[]) {
+    // Receives an input in the form of a string and separates them by spaces
+    char* nextToken = strtok(inputString, " ");
+    int i = 0;
+    while(nextToken != NULL) {
+        retval[i++] = nextToken;
+        nextToken = strtok(NULL, " ");
+    }
+}
+
 int handle(char* inputString) {
     //TODO accept more than just zero-length commands lol
-    char* argv[2];
-    argv[0] = inputString;
-    argv[1] = NULL;
+    char argv[MAXARGS];
+    parseInput(inputString, &argv);
     pid_t child;
     child = fork();
     if(child == 0) {
@@ -48,18 +58,15 @@ int handle(char* inputString) {
     return 0;
 }
 
-#pragma clang diagnostic push
-#pragma clang diagnostic ignored "-Wuninitialized"
 int main() {
-    char *machine;
+    char machine[1023];
     gethostname(machine, 1023);
     char* username = getenv("USER");
-    char inputString[MAXLN];
+    char inputString[MAXARGS];
     init();
     while(1) {
         if(getInput(inputString, username, machine)) continue;
         handle(inputString);
     }
-    #pragma clang diagnostic pop
     return EXIT_SUCCESS;
 }
