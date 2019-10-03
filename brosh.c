@@ -4,16 +4,15 @@
  * BROSH - The Broman Shell
  */
 
-#include <readline/readline.h>
 #include <readline/history.h>
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
 #include <unistd.h>
+#include <sys/wait.h>
 
 #define clear() printf("\033[H\033[J")
 #define MAXARGS 1000 // Maximum command arguments
-#define MAXSTR 1000 // Maximum command length
 
 void init() {
     clear();
@@ -44,16 +43,24 @@ void parseInput(char* inputString, char* retval[]) {
         retval[i++] = nextToken;
         nextToken = strtok(NULL, " ");
     }
+    retval[i] = NULL;
 }
 
 int handle(char* inputString) {
-    //TODO accept more than just zero-length commands lol
-    char argv[MAXARGS];
-    parseInput(inputString, &argv);
+    // Recieves an input string and executes it.
+    char* argv[MAXARGS];
+    int child_status;
+    parseInput(inputString, argv);
     pid_t child;
     child = fork();
     if(child == 0) {
         execvp(inputString, argv);
+    } else {
+        pid_t tpid;
+        do {
+            tpid = wait(&child_status);
+            if(tpid != child) return 0;
+        } while(tpid != child);
     }
     return 0;
 }
@@ -65,8 +72,8 @@ int main() {
     char inputString[MAXARGS];
     init();
     while(1) {
-        if(getInput(inputString, username, machine)) continue;
+        if(getInput(inputString, machine, username)) continue;
+        if(strcmp(inputString, "exit") == 0) return EXIT_SUCCESS;
         handle(inputString);
     }
-    return EXIT_SUCCESS;
 }
